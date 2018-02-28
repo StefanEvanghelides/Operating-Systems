@@ -44,12 +44,12 @@
 *.pdf
 
 # LAB 1
-execute
-ring
-duplicates
+1/execute/execute
+1/ring/ring
+1/duplicates/duplicates
 
 # LAB 2
-shell
+2/shell/shell
 
 
 # Debug files
