@@ -9,17 +9,29 @@
 #define TRUE 1
 
 /* Spits a strings into its components and stores them into an Array. */
-Array2D getArrayOfFlags(Array command) {
-	Array2D array2d;
+ArrayList getArrayOfFlags(Array command) {
+	ArrayList flags;
 	char *found;
 
-	initArray2D(&array2d,1,1);
+	initArrayList(&flags);
 	do {
 		found = strsep(&(command.data), " ");
-		if(found == NULL || strcmp(found, "")) addElement2D(&array2d, found);
+		Array foundArray;
+		initArray(&foundArray);
+
+		if(found != NULL) {
+			for(int i=0; i<strlen(found); i++) {
+				addElement(&foundArray, found[i]);
+			}
+		} else {
+			foundArray.length++;
+			foundArray.data = NULL;
+		}
+
+		if(foundArray.length > 0) addElementList(&flags, foundArray);
     } while (found != NULL);
 
-    return array2d;
+    return flags;
 }
 
 /* Stores the input in an Array file. */
@@ -79,7 +91,7 @@ void runShell() {
 		}
 
 		ArrayList tokens = parseInput(input);
-		printArrayList(&tokens);
+		//printArrayList(tokens);
 
 		for(int i=0; i<tokens.length; i++) {
 			child = fork(); /* Forks child to execute command. */
@@ -87,9 +99,10 @@ void runShell() {
 				perror("Forking error. Abord!\n");
 				exit(EXIT_FAILURE);
 			} else if(child == 0) {
-	  			Array2D flags = getArrayOfFlags(tokens.data[i]);
-				execvp (flags.data[0], flags.data);
-
+	  			ArrayList flags = getArrayOfFlags(tokens.data[i]);
+				char **flagsData = getArrayListData(flags);
+				execvp (flagsData[0], flagsData);
+				
 				// Should never reach here
 				perror("execvp error!\n");
 				exit(EXIT_FAILURE);

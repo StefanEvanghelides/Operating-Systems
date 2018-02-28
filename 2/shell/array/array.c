@@ -10,14 +10,6 @@ void initArray(Array *array) {
 	array->data = malloc(sizeof(char));
 }
 
-void initArray2D(Array2D *array2d, int rows, int cols) {
-	array2d->length = 0;
-	array2d->maxSize = rows;
-	array2d->data = malloc(rows * sizeof(char*));
-	for(int row=0; row<rows; row++) {
-		array2d->data[row] = malloc(cols * sizeof(char));
-	}
-}
 
 void initArrayList(ArrayList *arrayList) {
 	arrayList->length = 0;
@@ -31,12 +23,6 @@ void doubleSize(Array *array) {
 	int newSize = array->maxSize * 2;
 	array->data  = realloc(array->data, newSize*sizeof(char));	
 	array->maxSize = newSize;
-}
-
-void doubleSize2D(Array2D *array2d) {
-	int newSize = array2d->maxSize * 2;
-	array2d->data  = realloc(array2d->data, newSize*sizeof(char *));	
-	array2d->maxSize = newSize;
 }
 
 void doubleSizeList(ArrayList *arrayList) {
@@ -54,13 +40,6 @@ void addElement(Array *array, char element) {
 	array->length++;
 }
 
-void addElement2D(Array2D *array2d, char *element) {
-	if(array2d->length == array2d->maxSize) {
-		doubleSize2D(array2d);
-	}
-	array2d->data[array2d->length] = element;
-	array2d->length++;
-}
 
 void addElementList(ArrayList *arrayList, Array element) {
 	if(arrayList->length == arrayList->maxSize) {
@@ -70,11 +49,24 @@ void addElementList(ArrayList *arrayList, Array element) {
 	arrayList->length++;
 }
 
-void printArrayList(ArrayList *arrayList) {
-	for(int i=0; i < arrayList->length; i++) {
+char **getArrayListData(ArrayList list) {
+	char** data = malloc((list.length) * sizeof(char*));
+	for(int i=0; i < list.length; i++) {
+		if(list.data[i].data != NULL && strcmp(list.data[i].data, "")) {
+			data[i] = list.data[i].data;
+		} else if(list.data[i].data == NULL) {
+			data[i] = NULL;
+			break;
+		}
+	}
+	return data;
+}
+
+void printArrayList(ArrayList list) {
+	for(int i=0; i < list.length; i++) {
 		printf("Array[%d]=", i);
-		for(int j=0; j<arrayList->data[i].length; j++) {
-			printf("%d ", arrayList->data[i].data[j]);
+		for(int j=0; j<list.data[i].length; j++) {
+			printf("%d ", list.data[i].data[j]);
 		}
 		putchar('\n');
 	}
