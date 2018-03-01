@@ -5,6 +5,7 @@
 #include <signal.h>
 #include <sys/wait.h>
 #include "array/array.h"
+#include "parser/parser.h"
 
 #define TRUE 1
 
@@ -28,7 +29,9 @@ ArrayList getArrayOfFlags(Array command) {
 			foundArray.data = NULL;
 		}
 
-		if(foundArray.length > 0) addElementList(&flags, foundArray);
+		if(foundArray.length > 0) {
+			addElementList(&flags, foundArray);
+		}
     } while (found != NULL);
 
     return flags;
@@ -56,29 +59,6 @@ int quitProgram(Array command) {
 	return strcmp(command.data, "quit") == 0;
 }
 
-/* Parses the input. */
-ArrayList parseInput(Array input) {
-	ArrayList tokens;
-	initArrayList(&tokens);
-
-	int i=0;
-	while(i < input.length) {
-		Array currentToken;
-		initArray(&currentToken);
-
-		while(i < input.length && input.data[i] == ' ') i++; //removes spaces
-		
-		while(i < input.length && input.data[i] != '&') {
-			addElement(&currentToken, input.data[i]);
-			i++;
-		}
-		addElementList(&tokens, currentToken);
-		i++;
-	}
-
-	return tokens;
-}
-
 /* Runs the Shell program. */
 void runShell() {
 	int status, child;
@@ -91,7 +71,7 @@ void runShell() {
 		}
 
 		ArrayList tokens = parseInput(input);
-		//printArrayList(tokens);
+		printArrayList(tokens);
 
 		for(int i=0; i<tokens.length; i++) {
 			child = fork(); /* Forks child to execute command. */
@@ -100,6 +80,7 @@ void runShell() {
 				exit(EXIT_FAILURE);
 			} else if(child == 0) {
 	  			ArrayList flags = getArrayOfFlags(tokens.data[i]);
+	  			
 				char **flagsData = getArrayListData(flags);
 				execvp (flagsData[0], flagsData);
 				

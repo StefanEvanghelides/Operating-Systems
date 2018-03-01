@@ -1,8 +1,8 @@
 CC=cc 
 CFLAGS=-D_MINIX
 
-HEADERS = array/array.h
-OBJECTS = shell.o array/array.o
+HEADERS = array/array.h parser/parser.h
+OBJECTS = shell.o array/array.o parser/parser.o
 
 default: shell
 

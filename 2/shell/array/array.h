@@ -1,10 +1,18 @@
 #ifndef ARRAY_H
 #define ARRAY_H
 
+#define NONE       0
+#define BACKGROUND 1
+#define PIPE       2
+#define INPUT      3
+#define OUTPUT     4
+
+
 /* Structure representing the Array. */
 typedef struct Array{
 	int length;
 	int maxSize;
+	//int type;
 	char *data;
 } Array;
 

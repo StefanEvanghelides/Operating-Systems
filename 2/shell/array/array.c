@@ -7,6 +7,7 @@
 void initArray(Array *array) {
 	array->length = 0;
 	array->maxSize = 1;
+	//array->type = NONE;
 	array->data = malloc(sizeof(char));
 }
 
@@ -66,8 +67,15 @@ void printArrayList(ArrayList list) {
 	for(int i=0; i < list.length; i++) {
 		printf("Array[%d]=", i);
 		for(int j=0; j<list.data[i].length; j++) {
+			printf("%c ", list.data[i].data[j]);
+		}
+
+		printf(" (");
+		for(int j=0; j<list.data[i].length; j++) {
 			printf("%d ", list.data[i].data[j]);
 		}
+		printf(") ");
+
 		putchar('\n');
 	}
 }
