@@ -55,43 +55,42 @@ int acceptString(List *tl) {
 }
 
 int acceptRedirect(List *tl) {
+	if(!acceptString(tl)) return 0;
+
+	while(!acceptSymbol(tl, "<") && !acceptSymbol(tl, ">") 
+		&& !acceptSymbol(tl, "|") && !acceptSymbol(tl, "&")) {
+		if(!acceptString(tl)) return 0;
+	}
 
 	return 1;
 }
 
 int acceptPipe(List *tl) {
-	// if(!acceptRedirect(tl)) {
-	// 	return 0;
-	// }
-	// while(acceptSymbol(tl, "<")) {
-	// 	if(!acceptRedirect(tl)) {
-	// 		return 0;
-	// 	}
-	// }
-	// return 0;
+	if(!acceptRedirect(tl)) return 0;
+
+	while(acceptSymbol(tl, "<") || acceptSymbol(tl, ">")) {
+		if(!acceptRedirect(tl)) return 0;
+	}
+
 	return 1;
 }
 
 int acceptBackgroundProcess(List *tl) {
-	if(!acceptPipe(tl)) {
-		return 0;
-	}
+	if(!acceptPipe(tl)) return 0;
+
 	while(acceptSymbol(tl, "|")) {
-		if(!acceptPipe(tl)) {
-			return 0;
-		}
+		if(!acceptPipe(tl)) return 0;
 	}
+
 	return 1;
 }
 
 int acceptInput(List *tl) {
-	if(!acceptBackgroundProcess(tl)) {
-		return 0;
-	}
+	if(!acceptBackgroundProcess(tl)) return 0;
+
 	while(acceptSymbol(tl, "&")) {
-		if(!acceptBackgroundProcess(tl)) {
-			return 0;
-		}
+		if(!acceptBackgroundProcess(tl)) return 0;
 	}
+
 	return 1;
 }

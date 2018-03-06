@@ -29,7 +29,7 @@ char **getFlags(List command) {
 		i++;
 	}
 	flags[i] = NULL;
-	printf("len = %d\n", sizeof(flags)/sizeof(flags[0]));
+	printf("len = %d\n", (int)(sizeof(flags)/sizeof(flags[0])));
 
 	return flags;
 }
@@ -78,6 +78,7 @@ void runShell() {
 
 		tokens = parseInput(input);
 		printList(tokens);
+		free(input);
 
 		List tokensCopy = tokens;
 
@@ -85,6 +86,8 @@ void runShell() {
 			printf("\n -- Input can be executed! --\n\n");
 		} else {
 			perror("\n ERROR: cannot execute the input!\n\n");
+			freeList(tokens);
+			freeList(tokensCopy);
 			continue;
 		}
 
@@ -110,7 +113,7 @@ void runShell() {
 
 
 		freeList(tokens);
-		free(input);
+		freeList(tokensCopy);
 	}
 }
 
