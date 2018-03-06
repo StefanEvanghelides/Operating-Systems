@@ -12,24 +12,23 @@
 
 /* Returns the list of flags for the command
  * to be executed. */
-char **getFlags(List command) {
+char **getFlags(List *command) {
 	int maxSize = 2;
 	char **flags = malloc(maxSize * sizeof(char*));
 	assert(flags!= NULL);
 
 	int i=0;
-	while(command != NULL) {
+	while(!acceptSymbol(command, "&")) {
 		if(i == maxSize-1) {
 			maxSize *= 2;
 			flags = realloc(flags, maxSize * sizeof(char*));
 			assert(flags != NULL);
 		}
-		flags[i] = command->data;
-		command = command->next;
+		flags[i] = (*command)->data;
+		*command = (*command)->next;
 		i++;
 	}
 	flags[i] = NULL;
-	printf("len = %d\n", (int)(sizeof(flags)/sizeof(flags[0])));
 
 	return flags;
 }
@@ -61,9 +60,27 @@ int quitProgram(char *command) {
 	return strcmp(command, "quit") == 0;
 }
 
+void execBackgroundProcess(List *tokens) {
+	int status;
+	int child = fork(); /* Forks child to execute command. */
+			
+	if(child < 0) {
+		perror("Forking error. Abord!\n");
+		exit(EXIT_FAILURE);
+	} else if(child == 0) {	
+	  	char **flags = getFlags(tokens);
+		execvp (flags[0], flags);			
+
+		// Should never reach here
+		perror("execvp error!\n");
+		exit(EXIT_FAILURE);
+	} else {
+		waitpid(child, &status, 0);
+	}
+}
+
 /* Runs the Shell program. */
 void runShell() {
-	int status, child;
 	char *input;
 	List tokens;
 
@@ -82,35 +99,21 @@ void runShell() {
 
 		List tokensCopy = tokens;
 
-		if(acceptInput(&tokensCopy) && tokensCopy != NULL) {
+		if(acceptInput(&tokensCopy)) {
 			printf("\n -- Input can be executed! --\n\n");
 		} else {
-			perror("\n ERROR: cannot execute the input!\n\n");
+			printf("\n ERROR: cannot execute the input!\n\n");
 			freeList(tokens);
-			freeList(tokensCopy);
 			continue;
 		}
 
-		while(tokens != NULL) {
-			child = fork(); /* Forks child to execute command. */
-			
-			if(child < 0) {
-				perror("Forking error. Abord!\n");
-				exit(EXIT_FAILURE);
-			} else if(child == 0) {	
-			  	char **flags = getFlags(tokens);
-				execvp (flags[0], flags);			
-
-				// Should never reach here
-				perror("execvp error!\n");
-				exit(EXIT_FAILURE);
-			} else {
-				waitpid(child, &status, 0);
-			}
-
-			tokens = tokens->next;
+		/* Exec processes. */
+		execBackgroundProcess(&tokens);
+		while (tokens != NULL){ /* there should be a condition before executing a program. */
+			if(acceptSymbol(&tokens, "&")) {
+				execBackgroundProcess(&tokens);
+			} else break;
 		}
-
 
 		freeList(tokens);
 		freeList(tokensCopy);

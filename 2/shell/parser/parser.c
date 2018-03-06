@@ -54,22 +54,15 @@ int acceptString(List *tl) {
 	return 0;
 }
 
-int acceptRedirect(List *tl) {
+int acceptPipe(List *tl) {
 	if(!acceptString(tl)) return 0;
 
-	while(!acceptSymbol(tl, "<") && !acceptSymbol(tl, ">") 
-		&& !acceptSymbol(tl, "|") && !acceptSymbol(tl, "&")) {
+	if(acceptSymbol(tl, "<")) {
 		if(!acceptString(tl)) return 0;
 	}
-
-	return 1;
-}
-
-int acceptPipe(List *tl) {
-	if(!acceptRedirect(tl)) return 0;
-
-	while(acceptSymbol(tl, "<") || acceptSymbol(tl, ">")) {
-		if(!acceptRedirect(tl)) return 0;
+	
+	if(acceptSymbol(tl, ">")) {
+		if(!acceptString(tl)) return 0;
 	}
 
 	return 1;
