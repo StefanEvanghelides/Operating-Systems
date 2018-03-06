@@ -2,13 +2,14 @@
 #define PARSER_H
 
 /* Prototypes. */
-int endOfToken(Array input, int pos);
-Array parseToken(Array input, int *i, int type);
-ArrayList parseRedirects(Array input, int *i);
-ArrayList parsePipes();
-ArrayList parseBackgroundOperator();
-ArrayList parseInput(Array input);
-
+int isShellSymbol(char c);
+List parseInput(char *input);
+int acceptSymbol(List *tl, char *c);
+int acceptString(List *tl);
+int acceptRedirect(List *tl);
+int acceptPipe(List *tl);
+int acceptBackgroundProcess(List *tl);
+int acceptInput(List *tl);
 
 #endif
  

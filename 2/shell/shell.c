@@ -1,96 +1,119 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 #include <unistd.h>
 #include <signal.h>
 #include <sys/wait.h>
-#include "array/array.h"
+#include "list/list.h"
 #include "parser/parser.h"
 
 #define TRUE 1
 
-/* Spits a strings into its components and stores them into an Array. */
-ArrayList getArrayOfFlags(Array command) {
-	ArrayList flags;
-	char *found;
+/* Returns the list of flags for the command
+ * to be executed. */
+char **getFlags(List command) {
+	int maxSize = 2;
+	char **flags = malloc(maxSize * sizeof(char*));
+	assert(flags!= NULL);
 
-	initArrayList(&flags);
-	do {
-		found = strsep(&(command.data), " ");
-		Array foundArray;
-		initArray(&foundArray);
-
-		if(found != NULL) {
-			for(int i=0; i<strlen(found); i++) {
-				addElement(&foundArray, found[i]);
-			}
-		} else {
-			foundArray.length++;
-			foundArray.data = NULL;
+	int i=0;
+	while(command != NULL) {
+		if(i == maxSize-1) {
+			maxSize *= 2;
+			flags = realloc(flags, maxSize * sizeof(char*));
+			assert(flags != NULL);
 		}
+		flags[i] = command->data;
+		command = command->next;
+		i++;
+	}
+	flags[i] = NULL;
 
-		if(foundArray.length > 0) {
-			addElementList(&flags, foundArray);
-		}
-    } while (found != NULL);
+	for(int k=0; k<=i; k++) {
+		printf("%s (%d) \n", flags[k], flags[k][0]);
+	}
 
-    return flags;
+	return flags;
 }
 
-/* Stores the input in an Array file. */
-Array typePrompt() {
-	Array command;
-
-	initArray(&command);
-
-	printf("$ "); // The funny shell char
+/* Reads the input and saves it into a string. */
+char *readInput() {
+	int maxSize = 2;
+	char *input = malloc(maxSize * sizeof(char));
+	assert(input != NULL);
 
 	char c = getchar();
+	int i=0;
 	while(c != '\n') {
-		addElement(&command, c);
+		if(i == maxSize) {
+			maxSize *= 2;
+			input = realloc(input, maxSize * sizeof(char));
+			assert(input != NULL);
+		}
+		input[i] = c;
+		i++;
 		c = getchar();
 	}
 
-	return command;
+	return input;
 }
 
 /* Checks for the terminating command. */
-int quitProgram(Array command) {
-	return strcmp(command.data, "quit") == 0;
+int quitProgram(char *command) {
+	return strcmp(command, "quit") == 0;
 }
 
 /* Runs the Shell program. */
 void runShell() {
 	int status, child;
+	char *input;
+	List tokens;
 
 	while(TRUE) {
-		Array input = typePrompt();
-		
+		printf("$ ");	
+		input = readInput();
+
 		if(quitProgram(input)) { /* Check for the exit command. */
+			free(input);
 			break;
 		}
 
-		ArrayList tokens = parseInput(input);
-		printArrayList(tokens);
+		tokens = parseInput(input);
+		printList(tokens);
 
-		for(int i=0; i<tokens.length; i++) {
+		List tokensCopy = tokens;
+
+		if(acceptInput(&tokensCopy) && tokensCopy != NULL) {
+			printf("\n -- Input can be executed! --\n\n");
+		} else {
+			perror("\n ERROR: cannot execute the input!\n\n");
+			continue;
+		}
+
+		while(tokens != NULL) {
 			child = fork(); /* Forks child to execute command. */
+			
 			if(child < 0) {
 				perror("Forking error. Abord!\n");
 				exit(EXIT_FAILURE);
-			} else if(child == 0) {
-	  			ArrayList flags = getArrayOfFlags(tokens.data[i]);
-	  			
-				char **flagsData = getArrayListData(flags);
-				execvp (flagsData[0], flagsData);
-				
+			} else if(child == 0) {	
+			  	char **flags = getFlags(tokens);
+				execvp (flags[0], flags);			
+
 				// Should never reach here
 				perror("execvp error!\n");
 				exit(EXIT_FAILURE);
 			} else {
 				waitpid(child, &status, 0);
 			}
+
+			tokens = tokens->next;
 		}
+
+
+		freeList(tokens);
+		free(input);
 	}
 }
 
