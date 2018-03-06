@@ -18,13 +18,14 @@ char **getFlags(List *command) {
 	assert(flags!= NULL);
 
 	int i=0;
-	while(!acceptSymbol(command, "&")) {
+	while((*command) != NULL && !isShellSymbol((*command)->data[0])) {
 		if(i == maxSize-1) {
 			maxSize *= 2;
 			flags = realloc(flags, maxSize * sizeof(char*));
 			assert(flags != NULL);
 		}
-		flags[i] = (*command)->data;
+		flags[i] = malloc((strlen((*command)->data) + 1) * sizeof(char));
+		memcpy(flags[i], (*command)->data, strlen((*command)->data) + 1);
 		*command = (*command)->next;
 		i++;
 	}
@@ -42,7 +43,7 @@ char *readInput() {
 	char c = getchar();
 	int i=0;
 	while(c != '\n') {
-		if(i == maxSize) {
+		if(i == maxSize - 1) {
 			maxSize *= 2;
 			input = realloc(input, maxSize * sizeof(char));
 			assert(input != NULL);
@@ -51,6 +52,7 @@ char *readInput() {
 		i++;
 		c = getchar();
 	}
+	input[i] = '\0';
 
 	return input;
 }
@@ -62,13 +64,14 @@ int quitProgram(char *command) {
 
 void execBackgroundProcess(List *tokens) {
 	int status;
+	char **flags = getFlags(tokens);
+
 	int child = fork(); /* Forks child to execute command. */
-			
+
 	if(child < 0) {
 		perror("Forking error. Abord!\n");
 		exit(EXIT_FAILURE);
 	} else if(child == 0) {	
-	  	char **flags = getFlags(tokens);
 		execvp (flags[0], flags);			
 
 		// Should never reach here
@@ -81,19 +84,16 @@ void execBackgroundProcess(List *tokens) {
 
 /* Runs the Shell program. */
 void runShell() {
-	char *input;
-	List tokens;
-
 	while(TRUE) {
 		printf("$ ");	
-		input = readInput();
+		char *input = readInput();
 
 		if(quitProgram(input)) { /* Check for the exit command. */
 			free(input);
 			break;
 		}
 
-		tokens = parseInput(input);
+		List tokens = parseInput(input);
 		printList(tokens);
 		free(input);
 
@@ -109,14 +109,13 @@ void runShell() {
 
 		/* Exec processes. */
 		execBackgroundProcess(&tokens);
-		while (tokens != NULL){ /* there should be a condition before executing a program. */
+		while (tokens != NULL){ 
 			if(acceptSymbol(&tokens, "&")) {
 				execBackgroundProcess(&tokens);
 			} else break;
 		}
 
 		freeList(tokens);
-		freeList(tokensCopy);
 	}
 }
 

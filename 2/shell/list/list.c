@@ -7,11 +7,12 @@
 
 /* Extracts the substring of a string. */
 char *substring(char* string, int start, int end) {
-  char *sub = malloc((end - start) * sizeof(char));
+  char *sub = malloc((end - start + 1) * sizeof(char));
  
   for(int k = start; k < end; k++) {
     sub[k - start] = string[k];
   }
+  sub[end] = '\0';
  
   return sub;
 }
@@ -58,8 +59,7 @@ void freeList(List li) {
   if (li == NULL) {
     return;
   }
-
-  free(li->data);
+  if(li->data != NULL) free(li->data);
   freeList(li->next);
   free(li);
 }
