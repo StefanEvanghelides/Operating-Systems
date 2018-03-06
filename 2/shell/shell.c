@@ -29,10 +29,7 @@ char **getFlags(List command) {
 		i++;
 	}
 	flags[i] = NULL;
-
-	for(int k=0; k<=i; k++) {
-		printf("%s (%d) \n", flags[k], flags[k][0]);
-	}
+	printf("len = %d\n", sizeof(flags)/sizeof(flags[0]));
 
 	return flags;
 }
