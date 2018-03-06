@@ -1,115 +1,121 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 #include <unistd.h>
 #include <signal.h>
 #include <sys/wait.h>
-#include "array/array.h"
+#include "list/list.h"
+#include "parser/parser.h"
 
 #define TRUE 1
 
-/* Spits a strings into its components and stores them into an Array. */
-ArrayList getArrayOfFlags(Array command) {
-	ArrayList flags;
-	char *found;
+/* Returns the list of flags for the command
+ * to be executed. */
+char **getFlags(List *command) {
+	int maxSize = 2;
+	char **flags = malloc(maxSize * sizeof(char*));
+	assert(flags!= NULL);
 
-	initArrayList(&flags);
-	do {
-		found = strsep(&(command.data), " ");
-		Array foundArray;
-		initArray(&foundArray);
-
-		if(found != NULL) {
-			for(int i=0; i<strlen(found); i++) {
-				addElement(&foundArray, found[i]);
-			}
-		} else {
-			foundArray.length++;
-			foundArray.data = NULL;
+	int i=0;
+	while((*command) != NULL && !isShellSymbol((*command)->data[0])) {
+		if(i == maxSize-1) {
+			maxSize *= 2;
+			flags = realloc(flags, maxSize * sizeof(char*));
+			assert(flags != NULL);
 		}
+		flags[i] = malloc((strlen((*command)->data) + 1) * sizeof(char));
+		memcpy(flags[i], (*command)->data, strlen((*command)->data) + 1);
+		*command = (*command)->next;
+		i++;
+	}
+	flags[i] = NULL;
 
-		if(foundArray.length > 0) addElementList(&flags, foundArray);
-    } while (found != NULL);
-
-    return flags;
+	return flags;
 }
 
-/* Stores the input in an Array file. */
-Array typePrompt() {
-	Array command;
-
-	initArray(&command);
-
-	printf("$ "); // The funny shell char
+/* Reads the input and saves it into a string. */
+char *readInput() {
+	int maxSize = 2;
+	char *input = malloc(maxSize * sizeof(char));
+	assert(input != NULL);
 
 	char c = getchar();
+	int i=0;
 	while(c != '\n') {
-		addElement(&command, c);
+		if(i == maxSize - 1) {
+			maxSize *= 2;
+			input = realloc(input, maxSize * sizeof(char));
+			assert(input != NULL);
+		}
+		input[i] = c;
+		i++;
 		c = getchar();
 	}
+	input[i] = '\0';
 
-	return command;
+	return input;
 }
 
 /* Checks for the terminating command. */
-int quitProgram(Array command) {
-	return strcmp(command.data, "quit") == 0;
+int quitProgram(char *command) {
+	return strcmp(command, "quit") == 0;
 }
 
-/* Parses the input. */
-ArrayList parseInput(Array input) {
-	ArrayList tokens;
-	initArrayList(&tokens);
+void execBackgroundProcess(List *tokens) {
+	int status;
+	char **flags = getFlags(tokens);
 
-	int i=0;
-	while(i < input.length) {
-		Array currentToken;
-		initArray(&currentToken);
+	int child = fork(); /* Forks child to execute command. */
 
-		while(i < input.length && input.data[i] == ' ') i++; //removes spaces
-		
-		while(i < input.length && input.data[i] != '&') {
-			addElement(&currentToken, input.data[i]);
-			i++;
-		}
-		addElementList(&tokens, currentToken);
-		i++;
+	if(child < 0) {
+		perror("Forking error. Abord!\n");
+		exit(EXIT_FAILURE);
+	} else if(child == 0) {	
+		execvp (flags[0], flags);			
+
+		// Should never reach here
+		perror("execvp error!\n");
+		exit(EXIT_FAILURE);
+	} else {
+		waitpid(child, &status, 0);
 	}
-
-	return tokens;
 }
 
 /* Runs the Shell program. */
 void runShell() {
-	int status, child;
-
 	while(TRUE) {
-		Array input = typePrompt();
-		
+		printf("$ ");	
+		char *input = readInput();
+
 		if(quitProgram(input)) { /* Check for the exit command. */
+			free(input);
 			break;
 		}
 
-		ArrayList tokens = parseInput(input);
-		//printArrayList(tokens);
+		List tokens = parseInput(input);
+		printList(tokens);
+		free(input);
 
-		for(int i=0; i<tokens.length; i++) {
-			child = fork(); /* Forks child to execute command. */
-			if(child < 0) {
-				perror("Forking error. Abord!\n");
-				exit(EXIT_FAILURE);
-			} else if(child == 0) {
-	  			ArrayList flags = getArrayOfFlags(tokens.data[i]);
-				char **flagsData = getArrayListData(flags);
-				execvp (flagsData[0], flagsData);
-				
-				// Should never reach here
-				perror("execvp error!\n");
-				exit(EXIT_FAILURE);
-			} else {
-				waitpid(child, &status, 0);
-			}
+		List tokensCopy = tokens;
+
+		if(acceptInput(&tokensCopy)) {
+			printf("\n -- Input can be executed! --\n\n");
+		} else {
+			printf("\n ERROR: cannot execute the input!\n\n");
+			freeList(tokens);
+			continue;
 		}
+
+		/* Exec processes. */
+		execBackgroundProcess(&tokens);
+		while (tokens != NULL){ 
+			if(acceptSymbol(&tokens, "&")) {
+				execBackgroundProcess(&tokens);
+			} else break;
+		}
+
+		freeList(tokens);
 	}
 }
 
