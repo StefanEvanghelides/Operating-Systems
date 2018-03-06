@@ -94,7 +94,6 @@ void runShell() {
 		}
 
 		List tokens = parseInput(input);
-		printList(tokens);
 		free(input);
 
 		List tokensCopy = tokens;
