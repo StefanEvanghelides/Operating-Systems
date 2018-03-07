@@ -107,5 +107,8 @@ int main(int argc, char *argv[]){
 	while(parentMsg < 10);
 	waitpid(child[0], &status, 0);
 	waitpid(child[1], &status, 0);
+	
+	free(buffer);
+	
 	exit(EXIT_SUCCESS);
 }
