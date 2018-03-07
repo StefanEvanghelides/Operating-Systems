@@ -10,18 +10,25 @@
 
 #define TRUE 1
 
+void free2DArray(char **array, int row) {
+	for(int i=0; i<row; i++) {
+		free(array[i]);
+	}
+	free(array);
+}
+
 /* Returns the list of flags for the command
  * to be executed. */
-char **getFlags(List *command) {
-	int maxSize = 2;
-	char **flags = malloc(maxSize * sizeof(char*));
+char **getFlags(List *command, int *maxSize) {
+	*maxSize = 2;
+	char **flags = malloc((*maxSize) * sizeof(char*));
 	assert(flags!= NULL);
 
 	int i=0;
 	while((*command) != NULL && !isShellSymbol((*command)->data[0])) {
-		if(i == maxSize-1) {
-			maxSize *= 2;
-			flags = realloc(flags, maxSize * sizeof(char*));
+		if(i == (*maxSize)-1) {
+			(*maxSize) *= 2;
+			flags = realloc(flags, (*maxSize) * sizeof(char*));
 			assert(flags != NULL);
 		}
 		flags[i] = malloc((strlen((*command)->data) + 1) * sizeof(char));
@@ -62,23 +69,38 @@ int quitProgram(char *command) {
 	return strcmp(command, "quit") == 0;
 }
 
-void execBackgroundProcess(List *tokens) {
-	int status;
-	char **flags = getFlags(tokens);
+/* Execute the current command. */
+void execCommand(List *tokens) {
+	int status, row;
 
-	int child = fork(); /* Forks child to execute command. */
+	char **flags = getFlags(tokens, &row);	
+
+	int child = fork();
 
 	if(child < 0) {
+		free2DArray(flags, row);
 		perror("Forking error. Abord!\n");
 		exit(EXIT_FAILURE);
-	} else if(child == 0) {	
+	} else if(child == 0) {
 		execvp (flags[0], flags);			
 
-		// Should never reach here
+		// Should never reach here. Free memory and show error
+		free2DArray(flags, row);
 		perror("execvp error!\n");
 		exit(EXIT_FAILURE);
 	} else {
 		waitpid(child, &status, 0);
+	}
+	free2DArray(flags, row);
+}
+
+/* Run the commands from the token list. */
+void runCommands(List *tokens) {
+	execCommand(tokens);
+	while (tokens != NULL){ 
+		if(acceptSymbol(tokens, "&")) {
+			execCommand(tokens);
+		} else break;
 	}
 }
 
@@ -96,7 +118,7 @@ void runShell() {
 		List tokens = parseInput(input);
 		free(input);
 
-		List tokensCopy = tokens;
+		List tokensCopy = tokens; // Copy of the pointer
 
 		if(acceptInput(&tokensCopy)) {
 			printf("\n -- Input can be executed! --\n\n");
@@ -106,14 +128,11 @@ void runShell() {
 			continue;
 		}
 
-		/* Exec processes. */
-		execBackgroundProcess(&tokens);
-		while (tokens != NULL){ 
-			if(acceptSymbol(&tokens, "&")) {
-				execBackgroundProcess(&tokens);
-			} else break;
-		}
+		/* Exec commands. */
+		tokensCopy = tokens; // Use the copy again
+		runCommands(&tokensCopy);
 
+		/* Free memory. */
 		freeList(tokens);
 	}
 }
