@@ -116,9 +116,12 @@ void runShell() {
 		}
 
 		List tokens = parseInput(input);
-		free(input);
 
 		List tokensCopy = tokens; // Copy of the pointer
+
+		printList(tokensCopy);
+
+		tokensCopy = tokens;
 
 		if(acceptInput(&tokensCopy)) {
 			printf("\n -- Input can be executed! --\n\n");
@@ -133,6 +136,7 @@ void runShell() {
 		runCommands(&tokensCopy);
 
 		/* Free memory. */
+		free(input);
 		freeList(tokens);
 	}
 }
