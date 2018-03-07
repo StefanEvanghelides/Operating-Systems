@@ -7,12 +7,12 @@
 #include <sys/mman.h>
 #include <sys/wait.h>
 
-int pagesize;
-int parent;
-int child[2];
-int parentMsg = 0;
-int localCurrent = 0;
-int pipefd[2][2];
+int pagesize,
+	parent,
+	child[2],
+	parentMsg = 0,
+	localCurrent = 0,
+	pipefd[2][2];
 
 void handler(int sig, siginfo_t *si, void *unused){
 	mprotect(si->si_addr, pagesize, PROT_READ);
@@ -34,6 +34,18 @@ void sig2Handler(int sig, siginfo_t *si, void *unused){
 	}
 }
 
+struct sigaction createSigAction(void (*handler)(int, siginfo_t *, void *), int sig){
+	struct sigaction sa;
+  
+	sa.sa_flags = SA_SIGINFO;
+	sigemptyset(&sa.sa_mask);
+	sa.sa_sigaction = handler;
+	
+	sigaction(sig, &sa, NULL);
+	
+	return sa;
+}
+
 void pingPongProc(int whoami, int *turnVar){
 	int msg = 0;
 	while(msg < 5){
@@ -49,32 +61,14 @@ void pingPongProc(int whoami, int *turnVar){
 }
 
 int main(int argc, char *argv[]){
-	int  status = 0,
-		 *turnVar = 0;
+	int  status = 0, *turnVar = 0;
 	void *buffer;
 	
 	parent = getpid();
 	
-	struct sigaction sa;
-  
-	sa.sa_flags = SA_SIGINFO;
-	sigemptyset(&sa.sa_mask);
-	sa.sa_sigaction = handler;
-	sigaction(SIGSEGV, &sa, NULL);
-	
-	struct sigaction sa1;
-  
-	sa1.sa_flags = SA_SIGINFO;
-	sigemptyset(&sa1.sa_mask);
-	sa1.sa_sigaction = sig1Handler;
-	sigaction(SIGUSR1, &sa1, NULL);
-	
-	struct sigaction sa2;
-  
-	sa2.sa_flags = SA_SIGINFO;
-	sigemptyset(&sa2.sa_mask);
-	sa2.sa_sigaction = sig2Handler;
-	sigaction(SIGUSR2, &sa2, NULL);
+	struct sigaction sa = createSigAction(handler, SIGSEGV);	
+	struct sigaction sa1 = createSigAction(sig1Handler, SIGUSR1);
+	struct sigaction sa2 = createSigAction(sig2Handler, SIGUSR2);
 
 	pagesize = sysconf(_SC_PAGE_SIZE);
 	
@@ -84,6 +78,7 @@ int main(int argc, char *argv[]){
 	}
 	
 	turnVar = buffer;
+	mprotect(turnVar, pagesize, PROT_WRITE);
 	
 	for(int i = 0;i<2;i++){
 		if (pipe(pipefd[i]) == -1) {
@@ -91,8 +86,6 @@ int main(int argc, char *argv[]){
 			exit(EXIT_FAILURE);
 		}
 	}
-	
-	mprotect(turnVar, pagesize, PROT_WRITE);
 	
 	for(int i = 0;i<2;i++){
 		child[i] = fork();
