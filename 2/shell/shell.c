@@ -5,7 +5,6 @@
 #include <unistd.h>
 #include <signal.h>
 #include <sys/wait.h>
-//#include <sys/stat.h>
 #include <fcntl.h>
 #include "list/list.h"
 #include "parser/parser.h"
@@ -73,31 +72,7 @@ int quitProgram(char *command) {
 	return strcmp(command, "quit") == 0;
 }
 
-/* Execute the current command. */
-// void execCommand(List *tokens) {
-// 	int status, row;
-
-// 	char **flags = getFlags(tokens, &row);	
-
-// 	int child = fork();
-
-// 	if(child < 0) {
-// 		free2DArray(flags, row);
-// 		perror("Forking error. Abord!\n");
-// 		exit(EXIT_FAILURE);
-// 	} else if(child == 0) {
-// 		execvp (flags[0], flags);			
-
-// 		// Should never reach here. Free memory and show error
-// 		free2DArray(flags, row);
-// 		perror("execvp error!\n");
-// 		exit(EXIT_FAILURE);
-// 	} else {
-// 		waitpid(child, &status, 0);
-// 	}
-// 	free2DArray(flags, row);
-// }
-
+/* Executes the command. */
 void execCommand(List *tokens) {
 	int status;
 	int new_stdin, new_stdout;
@@ -124,7 +99,7 @@ void execCommand(List *tokens) {
 		exit(EXIT_FAILURE);
 
 	} else if(child == 0) {
-		if(inFile) {
+		if(inFile != NULL && inFile[0] != NULL) {
 			close(0);
 			printf("inFile[0] = %s\n", inFile[0]);
 			new_stdin = open(inFile[0], O_RDONLY);
@@ -136,7 +111,7 @@ void execCommand(List *tokens) {
 
 		}
 
-		if(outFile) {
+		if(outFile != NULL && outFile[0] != NULL) {
 			close(1);
 			printf("outFile[0] = %s\n", outFile[0]);
 			new_stdout = open(outFile[0], O_CREAT|O_WRONLY, 0777);
@@ -164,16 +139,35 @@ void execCommand(List *tokens) {
 	free2DArray(outFile, rowsOutFile);
 }
 
-/* Run the commands from the token list. */
-void runCommands(List *tokens) {
+
+void execPipe(List *tokens) {
 	execCommand(tokens);
+}
+
+void execBackgroundProcess(List *tokens) {
+	execCommand(tokens);
+}
+
+/* Executes the next command from the sequence. */
+void execNextCommand(List *tokens) {
+	execCommand(tokens);
+	while(tokens != NULL) {
+		if(acceptSymbol(tokens, "|")) {
+	 		execPipe(tokens);
+	 	} else if(acceptSymbol(tokens, "&")) {
+	 		execBackgroundProcess(tokens);
+	 	} else break;
+	}
+}
+
+/* Run the commands sequentially. */
+void runCommands(List *tokens) {
+	execNextCommand(tokens);
 	while (tokens != NULL){ 
-		if(acceptSymbol(tokens, "&")) {
-			execCommand(tokens);
+		if(acceptSymbol(tokens, ";")) {
+			execNextCommand(tokens);
 		} else break;
 	}
-
-	//execRedirect(tokens);
 }
 
 /* Runs the Shell program. */

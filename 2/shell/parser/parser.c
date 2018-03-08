@@ -8,7 +8,7 @@
 /* Checks if the character c is a symbol from the range
    {& , | , < , >}. */
 int isShellSymbol(char c) {
-  return (c == '&' || c == '|' || c == '<' || c == '>');
+  return (c == '&' || c == '|' || c == '<' || c == '>' || c == ';');
 }
 
 /* Parses the input string and returs a list of tokens. */
