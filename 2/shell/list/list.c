@@ -32,10 +32,10 @@ List newNode(char* input, int *ip) {
 
   } else { /* It is not a symbol. Parse the string. */
     int j = *ip;
+
     while(j < length && !isspace(input[j]) && !isShellSymbol(input[j])) j++;
     
     node->data = substring(input, *ip, j);
-    printf("node->data = %s\n",node->data);
     node->type = String;
     *ip = j;
   }
