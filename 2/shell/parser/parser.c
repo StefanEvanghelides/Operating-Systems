@@ -54,7 +54,7 @@ int acceptString(List *tl) {
 	return 0;
 }
 
-int acceptPipe(List *tl) {
+int acceptCommand(List *tl) {
 	if(!acceptString(tl)) return 0;
 
 	if(acceptSymbol(tl, "<")) {
@@ -68,21 +68,21 @@ int acceptPipe(List *tl) {
 	return 1;
 }
 
-int acceptBackgroundProcess(List *tl) {
-	if(!acceptPipe(tl)) return 0;
+int acceptNextCommand(List *tl) {
+	if(!acceptCommand(tl)) return 0;
 
-	while(acceptSymbol(tl, "|")) {
-		if(!acceptPipe(tl)) return 0;
+	while(acceptSymbol(tl, "|") || acceptSymbol(tl, "&")) {
+		if(!acceptCommand(tl)) return 0;
 	}
 
 	return 1;
 }
 
 int acceptInput(List *tl) {
-	if(!acceptBackgroundProcess(tl)) return 0;
+	if(!acceptNextCommand(tl)) return 0;
 
-	while(acceptSymbol(tl, "&")) {
-		if(!acceptBackgroundProcess(tl)) return 0;
+	while(acceptSymbol(tl, ";")) {
+		if(!acceptNextCommand(tl)) return 0;
 	}
 
 	return 1;

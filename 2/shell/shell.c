@@ -22,7 +22,7 @@ void free2DArray(char **array, int row) {
 
 /* Returns the list of flags for the command
  * to be executed. */
-char **getFlags(List *command, int *maxSize) {
+char **getStrings(List *command, int *maxSize) {
 	*maxSize = 2;
 	char **flags = malloc((*maxSize) * sizeof(char*));
 	assert(flags!= NULL);
@@ -72,21 +72,30 @@ int quitProgram(char *command) {
 	return strcmp(command, "quit") == 0;
 }
 
+/* Close pipes. */
+void closePipes(int prevFD[2], int nextFD[2]) {
+	close(prevFD[0]);
+	close(prevFD[1]);
+	close(nextFD[0]);
+	close(nextFD[1]);
+}
+
 /* Executes the command. */
-void execCommand(List *tokens) {
+void execCommand(List *tokens, int background) {
 	int status;
 	int new_stdin, new_stdout;
 	int rowsFlags=0, rowsInFile=0, rowsOutFile=0;
 	char **flags=NULL, **inFile=NULL, **outFile=NULL;
 
-	flags = getFlags(tokens, &rowsFlags);
+ 	// Get the command and the flags
+	flags = getStrings(tokens, &rowsFlags);
 
+	// Get the files to redirect input/output
 	if(acceptSymbol(tokens, "<")) {
-		inFile = getFlags(tokens, &rowsInFile);
+		inFile = getStrings(tokens, &rowsInFile);
 	}
-
 	if(acceptSymbol(tokens, ">")) {
-		outFile = getFlags(tokens, &rowsOutFile);
+		outFile = getStrings(tokens, &rowsOutFile);
 	}
 
 	int child = fork();
@@ -99,6 +108,17 @@ void execCommand(List *tokens) {
 		exit(EXIT_FAILURE);
 
 	} else if(child == 0) {
+		// check if the process should run in background
+		if(background == 1) {
+			close(STDIN_FILENO);
+			close(STDOUT_FILENO);
+			close(STDERR_FILENO);
+			int x = open("/dev/null", O_RDWR);
+			dup(x);
+			dup(x);
+		}
+
+		// checks "<" redirect
 		if(inFile != NULL && inFile[0] != NULL) {
 			close(0);
 			printf("inFile[0] = %s\n", inFile[0]);
@@ -111,6 +131,7 @@ void execCommand(List *tokens) {
 
 		}
 
+		// checks ">" redirect
 		if(outFile != NULL && outFile[0] != NULL) {
 			close(1);
 			printf("outFile[0] = %s\n", outFile[0]);
@@ -123,6 +144,7 @@ void execCommand(List *tokens) {
 			}
 		}
 
+		// Executes the command
 		execvp (flags[0], flags);			
 
 		// Should never reach here. Free memory and show error
@@ -131,31 +153,23 @@ void execCommand(List *tokens) {
 		free2DArray(outFile, rowsOutFile);
 		perror("execvp error!\n");
 		exit(EXIT_FAILURE);
-	} else {
-		waitpid(child, &status, 0);
+	} else { // waits only for processes in foreground
+		if(!background) waitpid(child, &status, 0);
 	}
 	free2DArray(flags, rowsFlags);
 	free2DArray(inFile, rowsInFile);
 	free2DArray(outFile, rowsOutFile);
 }
 
-
-void execPipe(List *tokens) {
-	execCommand(tokens);
-}
-
-void execBackgroundProcess(List *tokens) {
-	execCommand(tokens);
-}
-
 /* Executes the next command from the sequence. */
 void execNextCommand(List *tokens) {
-	execCommand(tokens);
+	execCommand(tokens, 0);
 	while(tokens != NULL) {
 		if(acceptSymbol(tokens, "|")) {
-	 		execPipe(tokens);
+			// NOTE: this is not implemented properly
+	 		execCommand(tokens, 0);
 	 	} else if(acceptSymbol(tokens, "&")) {
-	 		execBackgroundProcess(tokens);
+	 		execCommand(tokens, 1);
 	 	} else break;
 	}
 }
