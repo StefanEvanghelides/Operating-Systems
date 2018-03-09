@@ -17,5 +17,5 @@ clean:
 	-rm -f $(OBJECTS)
 	-rm -f pingpong
 
-run: shell
+run: pingpong
 	./pingpong
