@@ -197,12 +197,8 @@ void runShell() {
 
 		List tokens = parseInput(input);
 
+		/* Verify the validity of the input. */
 		List tokensCopy = tokens; // Copy of the pointer
-
-		printList(tokensCopy);
-
-		tokensCopy = tokens;
-
 		if(acceptInput(&tokensCopy)) {
 			printf("\n -- Input can be executed! --\n\n");
 		} else {
