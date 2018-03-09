@@ -7,12 +7,11 @@
 
 /* Extracts the substring of a string. */
 char *substring(char* string, int start, int end) {
-  char *sub = malloc((end - start + 1) * sizeof(char));
+  char *sub = calloc((end - start + 1), sizeof(char));
  
   for(int k = start; k < end; k++) {
     sub[k - start] = string[k];
   }
-  sub[end] = '\0';
  
   return sub;
 }
@@ -27,12 +26,15 @@ List newNode(char* input, int *ip) {
   if(isShellSymbol(input[*ip])){ /* It is a symbol. */
     node->data = malloc(2*sizeof(char));
     node->data[0] = input[*ip];
+    node->data[1] = '\0';
     node->type = Symbol;
     (*ip)++;
 
   } else { /* It is not a symbol. Parse the string. */
     int j = *ip;
+
     while(j < length && !isspace(input[j]) && !isShellSymbol(input[j])) j++;
+    
     node->data = substring(input, *ip, j);
     node->type = String;
     *ip = j;
